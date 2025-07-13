@@ -1,129 +1,140 @@
-# Anita - Anki Deck Generator
+# Anita - Smart Anki Deck Generator
 
-A Python tool that automatically generates Anki flashcard decks with audio pronunciation and images. Perfect for language learners who want to create multimedia vocabulary decks.
+![Anita Banner](https://via.placeholder.com/800x200.png?text=Anita+-+AI-Powered+Anki+Deck+Generator)
 
-## Features
+Automatically create rich multimedia Anki decks with AI-generated audio pronunciations and illustrations. Perfect for language learners seeking immersive vocabulary practice.
 
-- **Automated flashcard creation** from CSV vocabulary lists
-- **Text-to-Speech audio** generation for pronunciation using OpenAI's TTS API
-- **AI-generated images** for visual learning using DALL-E 2
-- **Optimized media files** with automatic image resizing
-- **Clean, minimalist card design** focused on effective learning
+## ✨ Features
 
-## Prerequisites
+- 📄 Convert CSV word lists into Anki decks in minutes
+- 🔊 Generate native-like pronunciation audio using OpenAI TTS (or ElevenLabs*)
+- 🖼️ Create memorable illustrations with DALL-E 2
+- 🖌️ Automatic image optimization (resized to 128x128px)
+- 📦 Clean, distraction-free card design
+- 🛠️ Robust error handling and progress tracking
+
+_* ElevenLabs integration optional_
+
+## 📋 Prerequisites
 
 - Python 3.7+
-- OpenAI API key
+- OpenAI API Key (required)
+- ElevenLabs API Key (optional)
 
-## Installation
+## 🚀 Installation
 
-1. Clone the repository:
+1. **Clone repository**
+   ```bash
+   git clone https://github.com/yourusername/anita.git
+   cd anita
+   ```
+
+2. **Install dependencies**
+   ```bash
+   pip install genanki openai requests pillow elevenlabs
+   ```
+
+3. **Set API keys**
+   ```bash
+   # Required OpenAI key
+   export OPENAI_API_KEY='your-openai-key-here'
+   
+   # Optional ElevenLabs key
+   export ELEVENLABS_API_KEY='your-elevenlabs-key-here'
+   ```
+
+## 🛠️ Usage
+
+### Command Line Interface
 ```bash
-git clone https://github.com/yourusername/anita.git
-cd anita
+python -m anita.deck_generator vocabulary.csv output_deck.apkg
 ```
 
-2. Install required dependencies:
-```bash
-pip install genanki openai requests pillow
-```
-
-3. Set your OpenAI API key:
-```bash
-export OPENAI_API_KEY='your-api-key-here'
-```
-
-## Usage
-
-### Basic Usage
-
+### Python API
 ```python
 from anita.deck_generator import AnkiDeckGenerator
 
-# Create generator instance
 generator = AnkiDeckGenerator(
-    deck_name="Italian Vocabulary Deck",
+    deck_name="Italian Essentials",
     deck_id=1234567891
 )
 
-# Generate deck from CSV file
-generator.run("vocabulary.csv", "italian_deck.apkg")
+generator.run("vocabulary.csv", "my_deck.apkg")
 ```
 
-### CSV Format
+### CSV Format Requirements
+Create a CSV with `English,Translation` pairs:
 
-Your input CSV file should have two columns: English and target language (e.g., Italian).
-
-Example `vocabulary.csv`:
-```
+```csv
 apple,mela
 house,casa
 book,libro
 water,acqua
 ```
 
-### Command Line Usage
+## 🔧 Configuration
 
-```bash
-python -m anita.deck_generator vocabulary.csv output_deck.apkg
-```
+Customize the generator with these parameters:
 
-## Configuration
+| Parameter           | Default                      | Description                  |
+|---------------------|------------------------------|------------------------------|
+| `deck_name`         | "Italian Vocabulary Deck"    | Name shown in Anki           |
+| `deck_id`           | 1234567891                   | Unique deck identifier       |
+| `output_media_dir`  | "media"                      | Media storage directory      |
+| `image_size`        | (128, 128)                   | Image dimensions in pixels   |
 
-The `AnkiDeckGenerator` class accepts the following parameters:
+## 🎴 Card Preview
 
-- `deck_name`: Name of your Anki deck (default: "Italian Vocabulary Deck with Images")
-- `deck_id`: Unique identifier for the deck (default: 1234567891)
-- `output_media_dir`: Directory for storing generated media files (default: "media")
+**Front Side**  
+`apple`
 
-## Generated Card Format
+**Back Side**  
+- **Translation**: mela  
+- **Pronunciation**: 🔊 Audio playback  
+- **Visual Aid**: 🖼️ AI-generated apple image
 
-Each flashcard includes:
-- **Front**: English word
-- **Back**: 
-  - Target language translation
-  - Audio pronunciation
-  - AI-generated illustration (128x128px)
+## 🤖 API Integration
 
-## API Usage
+| Service     | Use Case             | Model       | Cost Implications         |
+|-------------|----------------------|-------------|---------------------------|
+| OpenAI      | Text-to-Speech       | TTS-1       | $0.015 per 1k characters  |
+| OpenAI      | Image Generation     | DALL-E 2    | $0.020 per image          |
+| ElevenLabs  | Premium TTS (Optional)| v1         | Depends on subscription   |
 
-The tool uses OpenAI APIs for:
-- **TTS-1** model for audio generation
-- **DALL-E 2** for image generation
+## 📝 Example Workflow
 
-Note: API usage will incur costs based on OpenAI's pricing.
-
-## Error Handling
-
-The generator includes robust error handling:
-- Skips rows with insufficient data
-- Continues processing if individual media generation fails
-- Provides detailed console output for tracking progress
-
-## Example Output
-
-```
+```text
 Processing card 1: apple - mela
-  ✓ Generated audio for 'mela'
-  ✓ Generated image for 'apple'
+  ✓ Generated audio (OpenAI) for 'mela'
+  ✓ Generated image for 'apple' (128x128px)
 Processing card 2: house - casa
-  ✓ Generated audio for 'casa'
-  ✓ Generated image for 'house'
+  ✓ Generated audio (OpenAI) for 'casa'
+  ✓ Generated image for 'house' (128x128px)
 
-✅ Anki Deck Created: italian_deck.apkg
+✅ Deck created: italian_deck.apkg (4 cards)
 ```
 
-## Contributing
+## ⚠️ Important Notes
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+- API costs are incurred for each generation
+- Maintain CSV formatting for error-free processing
+- Store media files locally to avoid regeneration costs
+- First run may take longer due to media generation
 
-## License
+## 🤝 Contributing
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+We welcome contributions! Please see our [Contribution Guidelines](CONTRIBUTING.md) for details.
 
-## Acknowledgments
+## 📄 License
 
-- [genanki](https://github.com/kerrickstaley/genanki) for Anki deck generation
-- [OpenAI](https://openai.com/) for TTS and image generation APIs
+MIT License - See [LICENSE](LICENSE) for full text.
 
+## 🙏 Acknowledgments
 
+- [genanki](https://github.com/kerrickstaley/genanki) for Anki deck creation
+- OpenAI for cutting-edge AI models
+- ElevenLabs for premium voice synthesis options
+
+---
+
+_🔄 Refresh your language learning with AI-powered spaced repetition!_
