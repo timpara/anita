@@ -8,8 +8,8 @@ from anita.deck_generator import AnkiDeckGenerator
 if __name__ == "__main__":
     # --- Configuration ---
     INPUT_CSV = os.path.join('resources','restaurant.csv')
-    OUTPUT_DECK_FILE = "Italian_Vocabulary_Deck.apkg"
-
+    OUTPUT_DECK_FILE = "Italian_Vocabulary_Deck_Images.apkg"
+    DECK_NAME = "Italian Vocabulary Restaurant"
     # --- Choose your TTS provider ---
 
     # -- Option 1: Use OpenAI for TTS (Default) --
@@ -20,7 +20,8 @@ if __name__ == "__main__":
     # You can find voice IDs on the ElevenLabs website. "Bella" is a popular choice.
     generator = AnkiDeckGenerator(
         tts_provider="elevenlabs",
-        deck_name="Italian Vocabulary with ElevenLabs TTS",
+        deck_name=DECK_NAME,
+        generate_images=True
     )
 
     # --- Run the generator ---
