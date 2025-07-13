@@ -8,7 +8,7 @@ Automatically create rich multimedia Anki decks with AI-generated audio pronunci
 
 - 📄 Convert CSV word lists into Anki decks in minutes
 - 🔊 Generate native-like pronunciation audio using OpenAI TTS (or ElevenLabs*)
-- 🖼️ Create memorable illustrations with DALL-E 2
+- 🖼️ Create memorable illustrations with DALL-E 2 (optional)
 - 🖌️ Automatic image optimization (resized to 128x128px)
 - 📦 Clean, distraction-free card design
 - 🛠️ Robust error handling and progress tracking
@@ -17,9 +17,9 @@ _* ElevenLabs integration optional_
 
 ## 📋 Prerequisites
 
-- Python 3.7+
-- OpenAI API Key (required)
-- ElevenLabs API Key (optional)
+- Python 3.10+
+- OpenAI API Key (optional)
+- ElevenLabs API Key (optional, recoommended for premium TTS)
 
 ## 🚀 Installation
 
@@ -31,7 +31,7 @@ _* ElevenLabs integration optional_
 
 2. **Install dependencies**
    ```bash
-   pip install genanki openai requests pillow elevenlabs
+   poetry install
    ```
 
 3. **Set API keys**
