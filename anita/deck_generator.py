@@ -1,5 +1,6 @@
 import csv
 import os
+import sqlite3
 
 import genanki
 import openai
@@ -55,6 +56,9 @@ class AnkiDeckGenerator:
         os.makedirs(self.output_media_dir, exist_ok=True)
         self._initialize_apis()
 
+        self.db_path = os.path.join(os.path.dirname(__file__), "generated_cards.db")
+        self._init_db()
+
     def _initialize_apis(self):
         """Checks for and sets up the required API keys."""
         if not os.getenv("OPENAI_API_KEY"):
@@ -73,6 +77,21 @@ class AnkiDeckGenerator:
 
         elif self.tts_provider != 'openai':
             raise ValueError(f"Unsupported TTS provider: '{self.tts_provider}'. Choose 'openai' or 'elevenlabs'.")
+
+    def _init_db(self):
+        """Initializes the SQLite database for storing generated card data."""
+        self.conn = sqlite3.connect(self.db_path)
+        self.cursor = self.conn.cursor()
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cards (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                english TEXT,
+                italian TEXT,
+                image_fname TEXT,
+                audio_fname TEXT
+            )
+        ''')
+        self.conn.commit()
 
     def _create_anki_model(self):
         """Creates and returns the Anki model for the deck."""
@@ -125,7 +144,7 @@ class AnkiDeckGenerator:
             response = openai.audio.speech.create(
                 model='tts-1',
                 voice='alloy',
-                input=text
+                input=f" \n{text}\n "  # Adding pauses at the beginning and end
             )
             response.stream_to_file(output_filename)
             return True
@@ -139,7 +158,7 @@ class AnkiDeckGenerator:
             return False
         try:
             audio = self.elevenlabs_client.text_to_speech.convert(
-                text=text,
+                text=f" \n{text}\n ",  # Adding pauses at the beginning and end
                 voice_id=self.elevenlabs_voice_id,
                 model_id="eleven_multilingual_v2",
                 output_format="mp3_44100_128"
@@ -180,6 +199,21 @@ class AnkiDeckGenerator:
         except Exception as e:
             print(f"Error optimizing image '{image_path}': {e}")
 
+    def _save_card_to_db(self, english, italian, image_fname, audio_fname):
+        """Saves the generated card information to the SQLite database."""
+        self.cursor.execute(
+            "INSERT INTO cards (english, italian, image_fname, audio_fname) VALUES (?, ?, ?, ?)",
+            (english, italian, image_fname, audio_fname)
+        )
+        self.conn.commit()
+
+    def _get_card_from_db(self, english, italian):
+        self.cursor.execute(
+            "SELECT image_fname, audio_fname FROM cards WHERE english=? AND italian=?",
+            (english, italian)
+        )
+        return self.cursor.fetchone()
+
     def generate_deck(self, input_csv_path, output_anki_filename):
         try:
             with open(input_csv_path, newline='', encoding='utf-8') as csvfile:
@@ -192,28 +226,41 @@ class AnkiDeckGenerator:
                     english, italian = row[0].strip(), row[1].strip()
                     print(f"Processing card {idx + 1}: {english} - {italian}")
 
-                    safe_eng_word = "".join(c for c in english if c.isalnum())
-                    audio_fname = f'audio_{safe_eng_word}_{idx}.mp3'
-                    image_fname = f'image_{safe_eng_word}_{idx}.png'
-
-                    audio_path = os.path.join(self.output_media_dir, audio_fname)
-                    image_path = os.path.join(self.output_media_dir, image_fname)
-
-                    if self._generate_tts(italian, audio_path):
-                        print(f"  ✓ Generated audio for '{italian}' via {self.tts_provider.capitalize()}")
+                    # Check DB for existing card
+                    db_result = self._get_card_from_db(english, italian)
+                    if db_result:
+                        image_fname, audio_fname = db_result
+                        audio_path = os.path.join(self.output_media_dir, audio_fname) if audio_fname else None
+                        image_path = os.path.join(self.output_media_dir, image_fname) if image_fname else None
+                        print(f"  ✓ Found existing media in DB for '{english}'")
                     else:
-                        print(f"  ✗ Failed to generate audio for '{italian}'")
-                        audio_path = None
+                        safe_eng_word = "".join(c for c in english if c.isalnum())
+                        audio_fname = f'audio_{safe_eng_word}_{idx}.mp3'
+                        image_fname = f'image_{safe_eng_word}_{idx}.png'
+                        audio_path = os.path.join(self.output_media_dir, audio_fname)
+                        image_path = os.path.join(self.output_media_dir, image_fname)
 
-                    if self.generate_images:
-                        if self._generate_image(english, image_path):
-                            print(f"  ✓ Generated image for '{english}'")
-                            self._optimize_image_size(image_path)
+                        if self._generate_tts(italian, audio_path):
+                            print(f"  ✓ Generated audio for '{italian}' via {self.tts_provider.capitalize()}")
                         else:
-                            print(f"  ✗ Failed to generate image for '{english}'")
+                            print(f"  ✗ Failed to generate audio for '{italian}'")
+                            audio_path = None
+                            audio_fname = None
+
+                        if self.generate_images:
+                            if self._generate_image(english, image_path):
+                                print(f"  ✓ Generated image for '{english}'")
+                                self._optimize_image_size(image_path)
+                            else:
+                                print(f"  ✗ Failed to generate image for '{english}'")
+                                image_path = None
+                                image_fname = None
+                        else:
                             image_path = None
-                    else:
-                        image_path = None
+                            image_fname = None
+
+                        # Save to database only if newly generated
+                        self._save_card_to_db(english, italian, image_fname, audio_fname)
 
                     image_html = f'<img src="{image_fname}">' if image_path else ''
                     audio_field = f'[sound:{audio_fname}]' if audio_path else ''
