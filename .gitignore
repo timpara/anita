@@ -7,9 +7,21 @@ __pycache__/
 media/
 resources/
 *.apkg
-.env
-.env.local
 generated_cards.db
+
+# Secrets / credentials — never commit these
+.env
+.env.*
+!.env.example
+.envrc
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.yaml
+secrets.yml
+.pypirc
 
 # Tooling caches
 .ruff_cache/
@@ -151,8 +163,6 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
-.envrc
 .venv
 env/
 venv/
@@ -206,9 +216,6 @@ cython_debug/
 
 # Ruff stuff:
 .ruff_cache/
-
-# PyPI configuration file
-.pypirc
 
 # Cursor
 #  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
