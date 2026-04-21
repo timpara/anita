@@ -49,6 +49,18 @@ jobs:
         with:
           inputs: requirements-audit.txt
           vulnerability-service: osv
+      - name: Generate SBOM (smoke test)
+        run: |
+          uv export \
+            --frozen \
+            --format cyclonedx1.5 \
+            --all-extras \
+            -o sbom.cdx.json
+          python -c "import json; d = json.load(open('sbom.cdx.json')); \
+            assert d['bomFormat'] == 'CycloneDX', d['bomFormat']; \
+            assert d['specVersion'] == '1.5', d['specVersion']; \
+            assert len(d['components']) > 0, 'no components'; \
+            print(f'OK: {len(d[\"components\"])} components, spec {d[\"specVersion\"]}')"
 
   lint:
     name: Lint & type-check

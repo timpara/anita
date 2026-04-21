@@ -28,6 +28,7 @@ into Anki on desktop or mobile.
 - [Cost estimate](#cost-estimate)
 - [Contributing](#contributing)
 - [License](#license)
+- [Supply chain](#supply-chain)
 
 ## Features
 
@@ -169,6 +170,24 @@ To report a security issue, please see [SECURITY.md](SECURITY.md).
 ## License
 
 [Apache License 2.0](LICENSE) © 2024–present Anita contributors.
+
+## Supply chain
+
+Anita takes a few concrete steps to be a well-behaved dependency:
+
+- **PyPI OIDC trusted publishing** — releases are uploaded from GitHub
+  Actions without any long-lived API token.
+- **Sigstore attestations** — every wheel and sdist on PyPI is signed by
+  `pypa/gh-action-pypi-publish`, so you can verify provenance.
+- **CycloneDX SBOM** — each GitHub Release ships an
+  `anita-v<version>-sbom.cdx.json` bill of materials (CycloneDX 1.5)
+  listing every locked dependency.
+- **Secret scanning** — `gitleaks` runs on every PR, plus GitHub-native
+  push protection.
+- **Dependency auditing** — `pip-audit` scans `uv.lock` on every PR and
+  weekly against OSV.dev.
+
+See [`SECURITY.md`](SECURITY.md) for details and vulnerability reporting.
 
 ## Acknowledgments
 
