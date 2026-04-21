@@ -66,9 +66,11 @@ class OpenAIImageProvider:
     def _optimize(self, image_path: Path) -> None:
         try:
             with Image.open(image_path) as img:
-                if img.mode == "RGBA":
-                    img = img.convert("RGB")
-                img = img.resize(self.target_size, Image.Resampling.LANCZOS)
-                img.save(image_path, "PNG", optimize=True)
+                # Pillow 12's stubs distinguish ImageFile (what open() returns)
+                # from Image (what convert/resize return), so use a new binding
+                # for the transformed image rather than reassigning `img`.
+                converted: Image.Image = img.convert("RGB") if img.mode == "RGBA" else img
+                resized = converted.resize(self.target_size, Image.Resampling.LANCZOS)
+                resized.save(image_path, "PNG", optimize=True)
         except Exception as exc:
             log.warning("Image optimization failed for %s: %s", image_path, exc)
