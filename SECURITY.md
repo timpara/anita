@@ -70,7 +70,7 @@ ID to `pip-audit` via the `ignore-vulns` input in
 [`.github/workflows/ci.yml`](./.github/workflows/ci.yml):
 
 ```yaml
-- uses: pypa/gh-action-pip-audit@v1
+- uses: pypa/gh-action-pip-audit@v1.1.0
   with:
     inputs: requirements-audit.txt
     vulnerability-service: osv

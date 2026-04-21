@@ -45,7 +45,7 @@ jobs:
             --all-extras \
             -o requirements-audit.txt
       - name: Run pip-audit
-        uses: pypa/gh-action-pip-audit@v1
+        uses: pypa/gh-action-pip-audit@v1.1.0
         with:
           inputs: requirements-audit.txt
           vulnerability-service: osv
