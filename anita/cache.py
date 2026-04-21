@@ -81,3 +81,62 @@ class MediaCache:
                 (source, target, image_fname, audio_fname),
             )
             conn.commit()
+
+    def iter_rows(self) -> list[tuple[str, str, str | None, str | None]]:
+        """Return all cached rows as ``(source, target, image_fname, audio_fname)``."""
+        with self._connect() as conn:
+            return [
+                (row[0], row[1], row[2], row[3])
+                for row in conn.execute(
+                    "SELECT source, target, image_fname, audio_fname "
+                    "FROM cards ORDER BY source, target"
+                )
+            ]
+
+    def count(self) -> int:
+        """Return the number of rows currently in the cache index."""
+        with self._connect() as conn:
+            row = conn.execute("SELECT COUNT(*) FROM cards").fetchone()
+        return int(row[0]) if row else 0
+
+    def clear(self) -> None:
+        """Delete the underlying database file, if it exists."""
+        if self.db_path.exists():
+            self.db_path.unlink()
+
+    def prune_missing(self, media_dir: Path) -> int:
+        """Remove rows whose media files are no longer present on disk.
+
+        A row is pruned when *both* its image and audio filenames either
+        are ``NULL`` or point at files missing from ``media_dir``.
+        Partially-present rows (e.g. audio on disk but image gone) are
+        rewritten to clear only the missing field; this matches the
+        disk-reconciliation semantics used during deck generation.
+
+        Returns the number of rows fully removed.
+        """
+        removed = 0
+        with self._connect() as conn:
+            rows = list(
+                conn.execute(
+                    "SELECT id, image_fname, audio_fname FROM cards",
+                )
+            )
+            for row_id, image_fname, audio_fname in rows:
+                image_ok = bool(image_fname) and (media_dir / image_fname).is_file()
+                audio_ok = bool(audio_fname) and (media_dir / audio_fname).is_file()
+                if not image_ok and not audio_ok:
+                    conn.execute("DELETE FROM cards WHERE id=?", (row_id,))
+                    removed += 1
+                elif image_fname and not image_ok:
+                    conn.execute(
+                        "UPDATE cards SET image_fname=NULL WHERE id=?",
+                        (row_id,),
+                    )
+                elif audio_fname and not audio_ok:
+                    conn.execute(
+                        "UPDATE cards SET audio_fname=NULL WHERE id=?",
+                        (row_id,),
+                    )
+            conn.commit()
+        return removed
