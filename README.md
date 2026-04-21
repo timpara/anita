@@ -45,7 +45,7 @@ into Anki on desktop or mobile.
 # Install
 uv tool install anita-anki  # or: pipx install anita-anki
 
-# Set credentials
+# Set credentials (or copy `.env.example` → `.env` and edit)
 export OPENAI_API_KEY=sk-...
 # Optional:
 export ELEVENLABS_API_KEY=...
@@ -130,7 +130,14 @@ Working examples live in [`examples/`](examples/).
 ## Configuration
 
 API keys are read from environment variables. A `.env` file in the working directory is
-auto-loaded if present.
+auto-loaded if present — the fastest way to get started is:
+
+```bash
+cp .env.example .env
+# then edit .env with your real keys
+```
+
+`.env` is git-ignored; never commit it.
 
 | Variable              | Required for            |
 | --------------------- | ----------------------- |
