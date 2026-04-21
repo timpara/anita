@@ -1,5 +1,5 @@
 [project]
-name = "anita"
+name = "anita-anki"
 version = "0.1.0"
 description = "AI-powered Anki deck generator: turn a CSV of word pairs into a multimedia .apkg with TTS and illustrations."
 readme = "README.md"
