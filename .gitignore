@@ -2,8 +2,23 @@
 __pycache__/
 *.py[codz]
 *$py.class
+
+# Anita runtime artefacts
 media/
 resources/
+*.apkg
+.env
+.env.local
+generated_cards.db
+
+# Tooling caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
 # C extensions
 *.so
 .idea/
