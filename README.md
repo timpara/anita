@@ -193,8 +193,17 @@ every retry.
 
 ### Clearing the cache
 
-There is no `anita cache clear` subcommand yet (tracked separately).
-For now, delete the file directly:
+Anita ships a `cache` subcommand group:
+
+```bash
+anita cache path                          # print the DB path
+anita cache show                          # table of cached (source, target, audio?, image?)
+anita cache show --json                   # machine-readable output
+anita cache clear --yes                   # delete the DB (prompts without --yes)
+anita cache prune --missing-media media/  # drop rows whose media files are gone
+```
+
+If you prefer manual cleanup, remove the file directly:
 
 ```bash
 # Linux
