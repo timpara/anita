@@ -21,11 +21,23 @@ jobs:
         run: uv python install 3.12
       - name: Build sdist + wheel
         run: uv build
-      - name: Upload artifacts
+      - name: Generate CycloneDX SBOM
+        run: |
+          uv export \
+            --frozen \
+            --format cyclonedx1.5 \
+            --all-extras \
+            -o anita-${{ github.ref_name }}-sbom.cdx.json
+      - name: Upload distribution artifacts
         uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: anita-*-sbom.cdx.json
 
   github-release:
     name: Create GitHub release
@@ -33,15 +45,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Download artifacts
+      - name: Download distribution artifacts
         uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
+      - name: Download SBOM
+        uses: actions/download-artifact@v8
+        with:
+          name: sbom
+          path: sbom/
       - name: Create release
         uses: softprops/action-gh-release@v3
         with:
-          files: dist/*
+          files: |
+            dist/*
+            sbom/*.cdx.json
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}

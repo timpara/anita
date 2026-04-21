@@ -31,6 +31,7 @@ secrets.yml
 
 # Generated audit artefacts
 requirements-audit.txt
+*.cdx.json
 .coverage.*
 htmlcov/
 coverage.xml
