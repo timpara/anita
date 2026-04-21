@@ -1,0 +1,31 @@
+# Gitleaks configuration for Anita
+# https://github.com/gitleaks/gitleaks#configuration
+#
+# Strategy: inherit the default rule set (~160 rules covering AWS, GCP, GitHub,
+# Slack, Stripe, OpenAI, etc.) and add narrowly-scoped allowlists for
+# known-safe literals.
+
+title = "Anita gitleaks config"
+
+[extend]
+useDefault = true
+
+# --------------------------------------------------------------------- global
+# Paths that are not source code and intentionally contain high-entropy data.
+[[allowlists]]
+description = "Infrastructure files — package hashes and config"
+paths = [
+    '''uv\.lock$''',         # SHA-256 package hashes from PyPI
+    '''\.gitleaks\.toml$''', # this file (contains rule regexes)
+    '''\.pre-commit-config\.yaml$''',
+]
+
+# --------------------------------------------------------------------- rules
+# Public ElevenLabs voice ID. Voice IDs are shareable identifiers, equivalent
+# to a YouTube video ID — useless without the separately-stored API key.
+# See anita/providers/tts.py.
+[[allowlists]]
+description = "ElevenLabs DEFAULT_VOICE_ID (public identifier, not a secret)"
+paths = ['''anita/providers/tts\.py$''']
+regexTarget = "match"
+regexes = ['''CiwzbDpaN3pQXjTgx3ML''']
