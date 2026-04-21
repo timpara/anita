@@ -38,7 +38,7 @@ dependencies = [
     "openai>=1.95,<2",
     "requests>=2.32,<3",
     "pillow>=11,<12",
-    "platformdirs>=4,<5",
+    "platformdirs>=4.9.6,<5",
     "python-dotenv>=1,<2",
     "typer>=0.12,<1",
 ]
