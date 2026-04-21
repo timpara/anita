@@ -26,6 +26,7 @@ into Anki on desktop or mobile.
 - [CSV format](#csv-format)
 - [Configuration](#configuration)
 - [Cost estimate](#cost-estimate)
+- [Cache](#cache)
 - [Contributing](#contributing)
 - [License](#license)
 - [Supply chain](#supply-chain)
@@ -36,7 +37,7 @@ into Anki on desktop or mobile.
 - **Pluggable TTS** — OpenAI `tts-1` by default, ElevenLabs multilingual v2 optional.
 - **Optional illustrations** — DALL·E 2 images auto-resized to 128×128 px for clean cards.
 - **Local media cache** — every generated asset is cached in a SQLite DB so repeat runs are
-  free and fast.
+  free and fast. See [Cache](#cache) for location and lifecycle.
 - **Language-agnostic** — works for any source → target language pair.
 - **Clean card template** — distraction-free front/back with audio playback and image.
 
@@ -158,6 +159,62 @@ incurs zero API cost.
 | ElevenLabs  | Premium TTS       | v2         | Per your subscription tier    |
 
 A 500-word deck with audio-only (OpenAI) typically costs well under $0.50.
+
+## Cache
+
+Anita keeps a small SQLite index of previously generated media so that
+re-running `anita generate` on the same CSV skips paid API calls. The
+index stores **only filename mappings** (source text → target text →
+`image_fname`, `audio_fname`). It does **not** store API keys, prompts,
+generated audio, image bytes, or any other content — the media files
+themselves live in the `media/` directory you pass to the CLI.
+
+### Location
+
+The database path is resolved by
+[`platformdirs.user_cache_dir("anita")`](https://platformdirs.readthedocs.io/en/latest/api.html#platformdirs.user_cache_dir):
+
+| OS      | Default path                                                |
+| ------- | ----------------------------------------------------------- |
+| Linux   | `~/.cache/anita/generated_cards.db`                         |
+| macOS   | `~/Library/Caches/anita/generated_cards.db`                 |
+| Windows | `%LOCALAPPDATA%\anita\anita\Cache\generated_cards.db`       |
+
+Respects `XDG_CACHE_HOME` on Linux.
+
+### Lifecycle and disk reconciliation
+
+Anita checks each cached filename against `media/` on every run. If you
+delete a file out of `media/`, the next `anita generate` will regenerate
+just that asset (audio and image are handled independently). Known-failed
+generations are remembered so a flaky provider doesn't get hammered on
+every retry.
+
+### Clearing the cache
+
+There is no `anita cache clear` subcommand yet (tracked separately).
+For now, delete the file directly:
+
+```bash
+# Linux
+rm ~/.cache/anita/generated_cards.db
+
+# macOS
+rm ~/Library/Caches/anita/generated_cards.db
+```
+
+```powershell
+# Windows
+Remove-Item "$env:LOCALAPPDATA\anita\anita\Cache\generated_cards.db"
+```
+
+Or pass a project-local cache path when using the Python API:
+
+```python
+from pathlib import Path
+from anita.cache import MediaCache
+cache = MediaCache(db_path=Path("./anita-cache.db"))
+```
 
 ## Contributing
 
