@@ -97,22 +97,23 @@ class AnkiDeckGenerator:
     ) -> tuple[str | None, str | None]:
         cached = self.cache.get(source, target)
         if cached is not None:
-            image_fname, audio_fname = cached
-            log.debug("Cache hit for %s/%s", source, target)
+            cached_image, cached_audio = cached
+            cache_hit = True
         else:
-            safe = _safe_slug(source)
-            audio_fname = f"audio_{safe}_{idx}.mp3"
-            image_fname = f"image_{safe}_{idx}.png" if self.generate_images else None
+            cached_image, cached_audio = None, None
+            cache_hit = False
 
-            audio_path = self.media_dir / audio_fname
-            if not self.tts.synthesize(target, audio_path):
-                audio_fname = None
+        # Reconcile the cache index against the media directory: a filename
+        # that is no longer on disk must be regenerated, even on a cache hit.
+        # Audio and image are reconciled independently so a missing image
+        # doesn't force TTS to re-run (and vice versa).
+        audio_fname = self._reconcile_audio(idx, source, target, cached_audio, cache_hit)
+        image_fname = self._reconcile_image(idx, source, target, cached_image, cache_hit)
 
-            if self.generate_images and image_fname and self.images is not None:
-                image_path = self.media_dir / image_fname
-                if not self.images.generate(source, image_path):
-                    image_fname = None
-
+        # Persist whatever the current truth is (new, regenerated, or
+        # unchanged) so the index matches disk. Always write on a cache miss
+        # so that known-failed generations are remembered.
+        if not cache_hit or (image_fname, audio_fname) != (cached_image, cached_audio):
             self.cache.put(source, target, image_fname, audio_fname)
 
         if audio_fname:
@@ -121,6 +122,78 @@ class AnkiDeckGenerator:
             self.package.media_files.append(str(self.media_dir / image_fname))
 
         return audio_fname, image_fname
+
+    def _reconcile_audio(
+        self,
+        idx: int,
+        source: str,
+        target: str,
+        cached_fname: str | None,
+        cache_hit: bool,
+    ) -> str | None:
+        """Return the audio filename to use, regenerating if the file is gone.
+
+        A recorded ``None`` in the cache means TTS failed on a prior run and
+        is preserved as-is, consistent with the pre-existing behaviour of
+        not retrying known-failed generations.
+        """
+        if cache_hit and cached_fname is None:
+            return None
+        if cached_fname and (self.media_dir / cached_fname).is_file():
+            log.debug("Audio cache hit for %s/%s", source, target)
+            return cached_fname
+
+        if cached_fname:
+            log.info(
+                "Cache listed audio %s for %s/%s but file is missing; regenerating",
+                cached_fname,
+                source,
+                target,
+            )
+
+        safe = _safe_slug(source)
+        audio_fname = cached_fname or f"audio_{safe}_{idx}.mp3"
+        audio_path = self.media_dir / audio_fname
+        if self.tts.synthesize(target, audio_path):
+            return audio_fname
+        return None
+
+    def _reconcile_image(
+        self,
+        idx: int,
+        source: str,
+        target: str,
+        cached_fname: str | None,
+        cache_hit: bool,
+    ) -> str | None:
+        """Return the image filename to use, regenerating if the file is gone.
+
+        A recorded ``None`` in the cache means image generation failed on a
+        prior run and is preserved.
+        """
+        if not self.generate_images or self.images is None:
+            return None
+
+        if cache_hit and cached_fname is None:
+            return None
+        if cached_fname and (self.media_dir / cached_fname).is_file():
+            log.debug("Image cache hit for %s/%s", source, target)
+            return cached_fname
+
+        if cached_fname:
+            log.info(
+                "Cache listed image %s for %s/%s but file is missing; regenerating",
+                cached_fname,
+                source,
+                target,
+            )
+
+        safe = _safe_slug(source)
+        image_fname = cached_fname or f"image_{safe}_{idx}.png"
+        image_path = self.media_dir / image_fname
+        if self.images.generate(source, image_path):
+            return image_fname
+        return None
 
 
 # ---------------------------------------------------------------------- helpers
