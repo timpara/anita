@@ -1,0 +1,50 @@
+name: Pre-commit autoupdate
+
+# Weekly check for new versions of our pre-commit hook repos. If anything
+# bumps, opens a PR for review. Runs every Monday at 06:30 UTC (30 min
+# after the dependency audit), plus on-demand via workflow_dispatch.
+
+on:
+  schedule:
+    - cron: "30 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write # create branch + commit
+  pull-requests: write # open PR
+
+jobs:
+  autoupdate:
+    name: pre-commit autoupdate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install 3.12
+      - name: Install pre-commit
+        run: uv tool install pre-commit
+      - name: Run autoupdate
+        run: uv tool run pre-commit autoupdate
+      - name: Open PR if anything changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/pre-commit-autoupdate
+          delete-branch: true
+          commit-message: "chore(pre-commit): autoupdate hook versions"
+          title: "chore(pre-commit): autoupdate hook versions"
+          labels: |
+            ci
+            dependencies
+          body: |
+            Automated pre-commit `autoupdate` run.
+
+            This PR bumps one or more hook `rev:` pins in
+            `.pre-commit-config.yaml` to their latest tagged releases.
+
+            Please review each changelog before merging — a minor bump on
+            `ruff-pre-commit`, for example, can introduce new lint rules
+            that break CI.
