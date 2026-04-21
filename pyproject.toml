@@ -1,21 +1,137 @@
 [project]
 name = "anita"
 version = "0.1.0"
-description = ""
-authors = [
-    {name = "timpara",email = "t.paraskevopoulos@posteo.de"}
-]
+description = "AI-powered Anki deck generator: turn a CSV of word pairs into a multimedia .apkg with TTS and illustrations."
 readme = "README.md"
-requires-python = ">=3.10,<4.0"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "timpara", email = "t.paraskevopoulos@posteo.de" },
+]
+keywords = [
+    "anki",
+    "anki-deck",
+    "language-learning",
+    "spaced-repetition",
+    "openai",
+    "dall-e",
+    "tts",
+    "elevenlabs",
+    "flashcards",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Education",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Education",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Utilities",
+]
 dependencies = [
-    "genanki (>=0.13.1,<0.14.0)",
-    "openai (>=1.95.1,<2.0.0)",
-    "requests (>=2.32.4,<3.0.0)",
-    "pillow (>=11.3.0,<12.0.0)",
-    "elevenlabs (>=2.7.1,<3.0.0)",
+    "genanki>=0.13.1,<0.14",
+    "openai>=1.95,<2",
+    "requests>=2.32,<3",
+    "pillow>=11,<12",
+    "platformdirs>=4,<5",
+    "python-dotenv>=1,<2",
+    "typer>=0.12,<1",
 ]
 
+[project.optional-dependencies]
+elevenlabs = ["elevenlabs>=2.7,<3"]
+dev = [
+    "elevenlabs>=2.7,<3",
+    "pytest>=8",
+    "pytest-cov>=5",
+    "pytest-mock>=3.12",
+    "ruff>=0.6",
+    "mypy>=1.10",
+    "types-requests",
+    "pre-commit>=3.7",
+]
+
+[project.urls]
+Homepage = "https://github.com/timpara/anita"
+Repository = "https://github.com/timpara/anita"
+Issues = "https://github.com/timpara/anita/issues"
+Changelog = "https://github.com/timpara/anita/blob/main/CHANGELOG.md"
+
+[project.scripts]
+anita = "anita.cli:app"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["anita"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/anita",
+    "/examples",
+    "/tests",
+    "/README.md",
+    "/LICENSE",
+    "/CHANGELOG.md",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["anita", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # bugbear
+    "UP",  # pyupgrade
+    "SIM", # simplify
+    "N",   # pep8-naming
+    "RUF", # ruff-specific
+    "C4",  # comprehensions
+    "PTH", # use pathlib
+]
+ignore = [
+    "E501", # line length handled by formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011", "N802"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+ignore_missing_imports = true
+files = ["anita"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["anita"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
