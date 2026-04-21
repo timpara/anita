@@ -28,6 +28,9 @@ secrets.yml
 .mypy_cache/
 .pytest_cache/
 .coverage
+
+# Generated audit artefacts
+requirements-audit.txt
 .coverage.*
 htmlcov/
 coverage.xml

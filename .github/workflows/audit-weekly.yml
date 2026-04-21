@@ -1,0 +1,37 @@
+name: Weekly dependency audit
+
+# Catches freshly-disclosed CVEs in already-pinned dependencies between
+# Dependabot version bumps. The same pip-audit check also runs on every
+# PR/push via the main CI workflow (see ci.yml -> dep-audit).
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays, 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  audit:
+    name: pip-audit (weekly)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install 3.12
+      - name: Export locked requirements
+        run: |
+          uv export \
+            --frozen \
+            --format requirements.txt \
+            --no-hashes \
+            --no-emit-project \
+            --all-extras \
+            -o requirements-audit.txt
+      - name: Run pip-audit
+        uses: pypa/gh-action-pip-audit@v1
+        with:
+          inputs: requirements-audit.txt
+          vulnerability-service: osv
