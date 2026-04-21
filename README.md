@@ -27,7 +27,9 @@ into Anki on desktop or mobile.
 - [CSV format](#csv-format)
 - [Configuration](#configuration)
 - [Cost estimate](#cost-estimate)
+- [Runtime estimates](#runtime-estimates)
 - [Cache](#cache)
+- [Known limitations](#known-limitations)
 - [Contributing](#contributing)
 - [License](#license)
 - [Supply chain](#supply-chain)
@@ -161,6 +163,25 @@ incurs zero API cost.
 
 A 500-word deck with audio-only (OpenAI) typically costs well under $0.50.
 
+## Runtime estimates
+
+These are rough wall-clock figures for a fresh run (no cache hits) on a 100 Mbps connection. The dominant factor is the per-item round-trip latency to the provider API; CPU and disk are negligible. Cached items skip the network entirely and complete in milliseconds.
+
+| Rows | Providers                    | Typical wall-clock |
+| ---- | ---------------------------- | ------------------ |
+|  50  | gTTS only                    | ~30 s              |
+|  50  | OpenAI TTS only              | ~40 s              |
+|  50  | OpenAI TTS + DALL·E 2 images | ~3–5 min           |
+| 500  | gTTS only                    | ~5 min             |
+| 500  | OpenAI TTS only              | ~7 min             |
+| 500  | OpenAI TTS + DALL·E 2 images | ~30–50 min         |
+
+Tips:
+
+- The SQLite cache is populated per-item, so an interrupted run resumes cheaply.
+- Image generation is by far the slowest step — run audio-only first and add images on a second pass.
+- Provider rate limits (not your bandwidth) usually cap throughput; expect diminishing returns from parallelism.
+
 ## Cache
 
 Anita keeps a small SQLite index of previously generated media so that
@@ -225,6 +246,15 @@ from pathlib import Path
 from anita.cache import MediaCache
 cache = MediaCache(db_path=Path("./anita-cache.db"))
 ```
+
+## Known limitations
+
+- **OpenAI TTS 4096-char cap.** The `tts-1` endpoint rejects any request longer than 4096 characters. Anita's rows are typically short words or phrases, so this almost never bites — but if you pass long example sentences, split them first.
+- **DALL·E 2 availability.** DALL·E 2 is deprecated for new OpenAI accounts and may be unavailable depending on when your account was created. Existing accounts can still generate images; new accounts should prefer Stability AI.
+- **ElevenLabs free-tier caps.** The free tier has strict monthly character limits that a single large deck can exhaust. Audit your remaining quota before launching a 500-row run.
+- **AnkiWeb sync.** genanki produces a valid `.apkg`, but AnkiWeb cloud sync still requires you to import the file via the desktop Anki client at least once. There is no direct `.apkg` → AnkiWeb upload path.
+- **Unicode normalization.** Source/target strings are cached verbatim. A word written in NFC on macOS and NFD on Linux will produce distinct cache keys and regenerate media. If you move a deck between platforms, consider pre-normalizing your CSV with `unicodedata.normalize("NFC", ...)`.
+- **Non-deterministic `.apkg` bytes.** genanki embeds timestamps, so two identical runs produce different archive bytes. Tracked in #38.
 
 ## Contributing
 
