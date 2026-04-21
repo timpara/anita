@@ -35,7 +35,7 @@ classifiers = [
 ]
 dependencies = [
     "genanki>=0.13.1,<0.14",
-    "openai>=1.95,<2",
+    "openai>=2.32.0,<3",
     "requests>=2.32,<3",
     "pillow>=11,<12",
     "platformdirs>=4,<5",
