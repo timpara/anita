@@ -66,7 +66,7 @@ class ElevenLabsTTS:
         except ImportError as exc:
             raise ImportError(
                 "The 'elevenlabs' extra is not installed. "
-                "Install with: pip install 'anita[elevenlabs]'."
+                "Install with: pip install 'anita-anki[elevenlabs]'."
             ) from exc
 
         api_key = os.environ.get("ELEVENLABS_API_KEY")

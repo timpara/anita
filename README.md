@@ -43,7 +43,7 @@ into Anki on desktop or mobile.
 
 ```bash
 # Install
-uv tool install anita  # or: pipx install anita
+uv tool install anita-anki  # or: pipx install anita-anki
 
 # Set credentials
 export OPENAI_API_KEY=sk-...
@@ -61,12 +61,15 @@ Import `my_deck.apkg` into Anki and start reviewing.
 ### From PyPI (recommended)
 
 ```bash
-uv tool install anita
+uv tool install anita-anki
 # or
-pipx install anita
+pipx install anita-anki
 # or
-pip install anita
+pip install anita-anki
 ```
+
+> The distribution is published as **`anita-anki`** on PyPI (the name `anita` was taken),
+> but the import name and CLI are both `anita`.
 
 ### From source (development)
 

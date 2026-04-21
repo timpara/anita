@@ -27,7 +27,7 @@ USER anita
 WORKDIR /home/anita
 
 COPY --from=build /dist/*.whl /tmp/
-RUN pip install --user --no-cache-dir /tmp/*.whl 'anita[elevenlabs]' \
+RUN pip install --user --no-cache-dir /tmp/*.whl 'anita-anki[elevenlabs]' \
     && rm /tmp/*.whl
 
 ENV PATH="/home/anita/.local/bin:${PATH}"
