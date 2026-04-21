@@ -41,7 +41,9 @@ uv run pytest
 - **Paths:** always `pathlib.Path`, never `os.path`.
 - **Logging:** use the stdlib `logging` module, not `print`.
 - **Tests:** pytest; network calls must be mocked (see the `FakeTTS` /
-  `FakeImages` helpers in `tests/conftest.py`).
+  `FakeImages` helpers in `tests/conftest.py`). CI enforces a **90%
+  coverage floor** (`--cov-fail-under=90`); PRs that drop coverage below
+  that will fail.
 
 ## Commit messages
 

@@ -96,6 +96,103 @@ def test_read_csv_skips_malformed_rows(tmp_path: Path) -> None:
     assert _read_csv(csv) == [("apple", "mela"), ("house", "casa")]
 
 
+def test_read_csv_strips_utf8_bom(tmp_path: Path) -> None:
+    """BOM-prefixed content must parse cleanly; the first row must survive."""
+    csv = tmp_path / "bom.csv"
+    csv.write_bytes(b"\xef\xbb\xbfapple,mela\nhouse,casa\n")
+    pairs = _read_csv(csv)
+    # The BOM must be stripped from the first field so downstream slugs are clean.
+    assert pairs == [("apple", "mela"), ("house", "casa")]
+
+
+def test_read_csv_handles_extra_columns(tmp_path: Path) -> None:
+    """Rows wider than 2 columns use the first two and ignore the rest."""
+    csv = tmp_path / "wide.csv"
+    csv.write_text("apple,mela,fruit,red\nhouse,casa,building\n", encoding="utf-8")
+    assert _read_csv(csv) == [("apple", "mela"), ("house", "casa")]
+
+
+def test_read_csv_handles_quoted_cells_with_commas(tmp_path: Path) -> None:
+    """Quoted fields containing commas are one cell."""
+    csv = tmp_path / "quoted.csv"
+    csv.write_text('"good morning","buongiorno, amico"\nhello,ciao\n', encoding="utf-8")
+    assert _read_csv(csv) == [
+        ("good morning", "buongiorno, amico"),
+        ("hello", "ciao"),
+    ]
+
+
+def test_read_csv_trims_whitespace(tmp_path: Path) -> None:
+    csv = tmp_path / "ws.csv"
+    csv.write_text("  apple  ,  mela  \nhouse,casa\n", encoding="utf-8")
+    assert _read_csv(csv) == [("apple", "mela"), ("house", "casa")]
+
+
+def test_read_csv_does_not_misdetect_data_as_header(tmp_path: Path) -> None:
+    """The first row of real data must never be treated as a header."""
+    csv = tmp_path / "data.csv"
+    # Two very dissimilar rows — the old sniffer-based detector would trip here.
+    csv.write_text("apple,mela\n\u4e0a\u6d77,shanghai\n", encoding="utf-8")
+    assert _read_csv(csv) == [("apple", "mela"), ("\u4e0a\u6d77", "shanghai")]
+
+
+def test_read_csv_skips_alternate_header_names(tmp_path: Path) -> None:
+    """Headers beyond 'source,target' — e.g. 'word,translation' — are also detected."""
+    csv = tmp_path / "alt.csv"
+    csv.write_text("word,translation\napple,mela\nhouse,casa\n", encoding="utf-8")
+    assert _read_csv(csv) == [("apple", "mela"), ("house", "casa")]
+
+
+def test_partial_failure_tts_ok_image_fails(
+    tmp_path: Path, sample_csv: Path, fake_tts: FakeTTS
+) -> None:
+    """Image failure must not poison audio on subsequent runs."""
+    failing_images = FakeImages(should_fail=True)
+    gen = _make_generator(tmp_path, fake_tts, failing_images, generate_images=True)
+    gen.generate_deck(sample_csv, tmp_path / "a.apkg")
+
+    # Audio generated, image attempts failed.
+    assert len(fake_tts.calls) == 3
+    assert len(failing_images.calls) == 3
+    assert len(list((tmp_path / "media").glob("audio_*.mp3"))) == 3
+    assert list((tmp_path / "media").glob("image_*.png")) == []
+
+    # Second run: audio must be cached (no TTS call), image still retried
+    # because the cached None is preserved but the overall pipeline still
+    # reports done without regenerating cached assets.
+    tts2 = FakeTTS()
+    imgs2 = FakeImages(should_fail=True)
+    cache = MediaCache(db_path=tmp_path / "cache.db")
+    gen2 = AnkiDeckGenerator(
+        deck_name="Test Deck",
+        tts_provider=tts2,
+        generate_images=True,
+        image_provider=imgs2,
+        media_dir=tmp_path / "media",
+        cache=cache,
+    )
+    gen2.generate_deck(sample_csv, tmp_path / "b.apkg")
+    # Audio is cached on disk → no TTS call.
+    assert tts2.calls == []
+    # Image result was recorded as None → no retry.
+    assert imgs2.calls == []
+
+
+def test_partial_failure_tts_fails_image_ok(
+    tmp_path: Path, sample_csv: Path, fake_images: FakeImages
+) -> None:
+    """TTS failure must not block image generation or card creation."""
+    failing_tts = FakeTTS(should_fail=True)
+    gen = _make_generator(tmp_path, failing_tts, fake_images, generate_images=True)
+    out = tmp_path / "a.apkg"
+    gen.generate_deck(sample_csv, out)
+    assert out.exists()
+    assert len(failing_tts.calls) == 3
+    assert len(fake_images.calls) == 3
+    assert len(list((tmp_path / "media").glob("image_*.png"))) == 3
+    assert list((tmp_path / "media").glob("audio_*.mp3")) == []
+
+
 def test_tts_failure_drops_audio_but_keeps_card(tmp_path: Path, sample_csv: Path) -> None:
     failing_tts = FakeTTS(should_fail=True)
     gen = _make_generator(tmp_path, failing_tts)
