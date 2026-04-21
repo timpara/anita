@@ -43,13 +43,13 @@ class OpenAIImageProvider:
 
     def generate(self, prompt: str, output_path: Path) -> bool:
         try:
-            response = self._client.images.generate(
+            response = self._client.images.generate(  # type: ignore[call-overload]
                 model=self.model,
                 prompt=f"{prompt}, simple illustration, clean, minimal, white background",
                 n=1,
-                size=self.size,  # type: ignore[arg-type]
+                size=self.size,
             )
-            url = response.data[0].url
+            url = response.data[0].url if response.data else None
             if not url:
                 log.error("Image generation returned no URL for %r", prompt)
                 return False

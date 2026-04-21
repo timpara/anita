@@ -46,11 +46,12 @@ class AnkiDeckGenerator:
             tts_kwargs: dict[str, object] = {}
             if tts_provider.lower() == "elevenlabs" and elevenlabs_voice_id:
                 tts_kwargs["voice_id"] = elevenlabs_voice_id
-            self.tts = build_tts(tts_provider, **tts_kwargs)
+            self.tts: TTSProvider = build_tts(tts_provider, **tts_kwargs)
         else:
             self.tts = tts_provider
 
         # Resolve image provider lazily: only instantiate when enabled
+        self.images: ImageProvider | None
         if generate_images:
             self.images = image_provider or OpenAIImageProvider()
         else:
