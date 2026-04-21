@@ -29,3 +29,20 @@ Include, if possible:
 You should receive an acknowledgement within **5 business days**. We will keep
 you informed as we investigate and prepare a fix. Coordinated disclosure is
 appreciated.
+
+## Secret scanning
+
+This repository is protected against accidental secret leaks by multiple layers:
+
+- **Pre-commit** — [gitleaks](https://github.com/gitleaks/gitleaks) scans
+  staged content on every commit. Install hooks with `pre-commit install`.
+- **CI** — the `Secret scan (gitleaks)` job runs on every push and pull
+  request against the full git history. It is a required check for merges
+  into `main`.
+- **GitHub native** — secret scanning and push protection are enabled at the
+  repository level, blocking pushes that contain known provider token
+  patterns (AWS, GitHub, OpenAI, Stripe, etc.).
+
+Configuration lives in [`.gitleaks.toml`](./.gitleaks.toml). If gitleaks
+flags a false positive, open a PR adding a narrow allowlist entry rather
+than disabling the scan.
