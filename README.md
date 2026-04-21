@@ -1,69 +1,119 @@
-# Anita - Smart Anki Deck Generator
+# Anita — AI-Powered Anki Deck Generator
 
-![Anita Banner](https://via.placeholder.com/800x200.png?text=Anita+-+AI-Powered+Anki+Deck+Generator)
+[![CI](https://github.com/timpara/anita/actions/workflows/ci.yml/badge.svg)](https://github.com/timpara/anita/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![uv](https://img.shields.io/badge/packaging-uv-261230)](https://github.com/astral-sh/uv)
 
-Automatically create rich multimedia Anki decks with AI-generated audio pronunciations and illustrations. Perfect for language learners seeking immersive vocabulary practice.
+Turn a plain CSV of word pairs into a rich, multimedia [Anki](https://apps.ankiweb.net/) deck
+with AI-generated native-like pronunciations and optional illustrations — in minutes, for any
+language pair.
 
-## ✨ Features
+## Why Anita?
 
-- 📄 Convert CSV word lists into Anki decks in minutes
-- 🔊 Generate native-like pronunciation audio using OpenAI TTS (or ElevenLabs*)
-- 🖼️ Create memorable illustrations with DALL-E 2 (optional)
-- 🖌️ Automatic image optimization (resized to 128x128px)
-- 📦 Clean, distraction-free card design
-- 🛠️ Robust error handling and progress tracking
+Language learners lose hours building decent flashcards by hand. Anita automates the tedious
+part — generating TTS audio (OpenAI or ElevenLabs) and optional DALL·E images — so you can
+focus on reviewing, not curating. Feed it a CSV, get back a `.apkg` you can import straight
+into Anki on desktop or mobile.
 
-_* ElevenLabs integration optional_
+## Table of contents
 
-## 📋 Prerequisites
+- [Features](#features)
+- [Quickstart](#quickstart)
+- [Installation](#installation)
+- [Usage](#usage)
+- [CSV format](#csv-format)
+- [Configuration](#configuration)
+- [Cost estimate](#cost-estimate)
+- [Contributing](#contributing)
+- [License](#license)
 
-- Python 3.10+
-- OpenAI API Key (optional)
-- ElevenLabs API Key (optional, recoommended for premium TTS)
+## Features
 
-## 🚀 Installation
+- **CSV in, `.apkg` out** — point it at a two-column CSV and get a ready-to-import Anki deck.
+- **Pluggable TTS** — OpenAI `tts-1` by default, ElevenLabs multilingual v2 optional.
+- **Optional illustrations** — DALL·E 2 images auto-resized to 128×128 px for clean cards.
+- **Local media cache** — every generated asset is cached in a SQLite DB so repeat runs are
+  free and fast.
+- **Language-agnostic** — works for any source → target language pair.
+- **Clean card template** — distraction-free front/back with audio playback and image.
 
-1. **Clone repository**
-   ```bash
-   git clone https://github.com/yourusername/anita.git
-   cd anita
-   ```
+## Quickstart
 
-2. **Install dependencies**
-   ```bash
-   poetry install
-   ```
-
-3. **Set API keys**
-   ```bash
-   # Required OpenAI key
-   export OPENAI_API_KEY='your-openai-key-here'
-   
-   # Optional ElevenLabs key
-   export ELEVENLABS_API_KEY='your-elevenlabs-key-here'
-   ```
-
-## 🛠️ Usage
-
-### Command Line Interface
 ```bash
-python -m anita.deck_generator vocabulary.csv output_deck.apkg
+# Install
+uv tool install anita  # or: pipx install anita
+
+# Set credentials
+export OPENAI_API_KEY=sk-...
+# Optional:
+export ELEVENLABS_API_KEY=...
+
+# Generate
+anita generate examples/basics.csv my_deck.apkg --deck-name "My Vocabulary"
 ```
+
+Import `my_deck.apkg` into Anki and start reviewing.
+
+## Installation
+
+### From PyPI (recommended)
+
+```bash
+uv tool install anita
+# or
+pipx install anita
+# or
+pip install anita
+```
+
+### From source (development)
+
+```bash
+git clone https://github.com/timpara/anita.git
+cd anita
+uv sync --all-extras
+uv run anita --help
+```
+
+## Usage
+
+### CLI
+
+```bash
+anita generate INPUT.csv OUTPUT.apkg [OPTIONS]
+```
+
+Common options:
+
+| Flag                   | Default                | Description                                         |
+| ---------------------- | ---------------------- | --------------------------------------------------- |
+| `--deck-name`          | `Anita Vocabulary`     | Deck name shown inside Anki.                        |
+| `--tts`                | `openai`               | TTS provider: `openai` or `elevenlabs`.             |
+| `--images / --no-images` | `--no-images`        | Generate DALL·E illustrations per card.             |
+| `--voice-id`           | *(elevenlabs preset)*  | ElevenLabs voice ID.                                |
+| `--verbose`            | `false`                | Enable debug logging.                               |
+
+Run `anita generate --help` for the full list.
 
 ### Python API
+
 ```python
-from anita.deck_generator import AnkiDeckGenerator
+from anita import AnkiDeckGenerator
 
 generator = AnkiDeckGenerator(
-    deck_name="Italian Essentials",
-    deck_id=1234567891
+    deck_name="Italian Restaurant",
+    tts_provider="elevenlabs",
+    generate_images=True,
 )
-
-generator.run("vocabulary.csv", "my_deck.apkg")
+generator.generate_deck("examples/restaurant.csv", "restaurant.apkg")
 ```
 
-### CSV Format Requirements
-Create a CSV with `English,Translation` pairs:
+## CSV format
+
+Two columns: source word (prompt side) and target word (answer side). Header row is optional
+and auto-detected.
 
 ```csv
 apple,mela
@@ -72,69 +122,46 @@ book,libro
 water,acqua
 ```
 
-## 🔧 Configuration
+Working examples live in [`examples/`](examples/).
 
-Customize the generator with these parameters:
+## Configuration
 
-| Parameter           | Default                      | Description                  |
-|---------------------|------------------------------|------------------------------|
-| `deck_name`         | "Italian Vocabulary Deck"    | Name shown in Anki           |
-| `deck_id`           | 1234567891                   | Unique deck identifier       |
-| `output_media_dir`  | "media"                      | Media storage directory      |
-| `image_size`        | (128, 128)                   | Image dimensions in pixels   |
+API keys are read from environment variables. A `.env` file in the working directory is
+auto-loaded if present.
 
-## 🎴 Card Preview
+| Variable              | Required for            |
+| --------------------- | ----------------------- |
+| `OPENAI_API_KEY`      | OpenAI TTS, DALL·E      |
+| `ELEVENLABS_API_KEY`  | ElevenLabs TTS (optional) |
 
-**Front Side**  
-`apple`
+Generated media is cached under your OS user-cache directory (via
+[`platformdirs`](https://pypi.org/project/platformdirs/)) so re-running on the same words
+incurs zero API cost.
 
-**Back Side**  
-- **Translation**: mela  
-- **Pronunciation**: 🔊 Audio playback  
-- **Visual Aid**: 🖼️ AI-generated apple image
+## Cost estimate
 
-## 🤖 API Integration
+| Service     | Use case          | Model      | Approximate cost              |
+| ----------- | ----------------- | ---------- | ----------------------------- |
+| OpenAI      | TTS               | `tts-1`    | $0.015 / 1k characters        |
+| OpenAI      | Image generation  | DALL·E 2   | $0.020 / image (256×256)      |
+| ElevenLabs  | Premium TTS       | v2         | Per your subscription tier    |
 
-| Service     | Use Case             | Model       | Cost Implications         |
-|-------------|----------------------|-------------|---------------------------|
-| OpenAI      | Text-to-Speech       | TTS-1       | $0.015 per 1k characters  |
-| OpenAI      | Image Generation     | DALL-E 2    | $0.020 per image          |
-| ElevenLabs  | Premium TTS (Optional)| v1         | Depends on subscription   |
+A 500-word deck with audio-only (OpenAI) typically costs well under $0.50.
 
-## 📝 Example Workflow
+## Contributing
 
-```text
-Processing card 1: apple - mela
-  ✓ Generated audio (OpenAI) for 'mela'
-  ✓ Generated image for 'apple' (128x128px)
-Processing card 2: house - casa
-  ✓ Generated audio (OpenAI) for 'casa'
-  ✓ Generated image for 'house' (128x128px)
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup, coding style,
+and PR conventions. By participating you agree to the
+[Code of Conduct](CODE_OF_CONDUCT.md).
 
-✅ Deck created: italian_deck.apkg (4 cards)
-```
+To report a security issue, please see [SECURITY.md](SECURITY.md).
 
-## ⚠️ Important Notes
+## License
 
-- API costs are incurred for each generation
-- Maintain CSV formatting for error-free processing
-- Store media files locally to avoid regeneration costs
-- First run may take longer due to media generation
+[Apache License 2.0](LICENSE) © 2024–present Anita contributors.
 
-## 🤝 Contributing
+## Acknowledgments
 
-We welcome contributions! Please see our [Contribution Guidelines](CONTRIBUTING.md) for details.
-
-## 📄 License
-
-MIT License - See [LICENSE](LICENSE) for full text.
-
-## 🙏 Acknowledgments
-
-- [genanki](https://github.com/kerrickstaley/genanki) for Anki deck creation
-- OpenAI for cutting-edge AI models
-- ElevenLabs for premium voice synthesis options
-
----
-
-_🔄 Refresh your language learning with AI-powered spaced repetition!_
+- [genanki](https://github.com/kerrickstaley/genanki) — Anki deck construction.
+- [OpenAI](https://openai.com/) — TTS and image generation.
+- [ElevenLabs](https://elevenlabs.io/) — premium multilingual voices.
