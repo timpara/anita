@@ -1,0 +1,78 @@
+name: Bug report
+description: Report a defect in Anita
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to file a bug report!
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to reproduce. Include the CSV (or a sample) and the exact command.
+      placeholder: |
+        1. CSV content: ...
+        2. Ran `anita generate ...`
+        3. See error ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior (logs, stack traces)
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Anita version
+      description: Output of `anita --version`
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      description: Output of `python --version`
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: macOS 14.5 / Ubuntu 22.04 / Windows 11
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tts
+    attributes:
+      label: TTS provider in use
+      options:
+        - openai
+        - elevenlabs
+        - other / not applicable
+    validations:
+      required: true
