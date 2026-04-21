@@ -203,21 +203,45 @@ def _safe_slug(text: str) -> str:
     return "".join(c for c in text if c.isalnum()) or "item"
 
 
+_HEADER_TOKENS = frozenset(
+    {
+        "source",
+        "target",
+        "word",
+        "translation",
+        "native",
+        "foreign",
+        "english",
+        "front",
+        "back",
+        "term",
+        "definition",
+    }
+)
+
+
+def _looks_like_header(row: list[str]) -> bool:
+    """Return True if every cell in the first row looks like a column label.
+
+    ``csv.Sniffer.has_header`` is unreliable on short 2-column files — it
+    trips on dissimilar rows and strips real data. Instead we opt-in only
+    when every cell (lower-cased, stripped) matches a small allow-list of
+    common header tokens.
+    """
+    if len(row) < 2:
+        return False
+    normalized = [cell.strip().lower() for cell in row[:2]]
+    return all(cell in _HEADER_TOKENS for cell in normalized)
+
+
 def _read_csv(path: Path) -> list[tuple[str, str]]:
     """Read two-column CSV, skipping a header row if detected, dropping bad rows."""
-    with path.open(newline="", encoding="utf-8") as fh:
-        sample = fh.read(2048)
-        fh.seek(0)
-        has_header = False
-        try:
-            has_header = csv.Sniffer().has_header(sample)
-        except csv.Error:
-            has_header = False
-
+    with path.open(newline="", encoding="utf-8-sig") as fh:
         reader = csv.reader(fh)
         rows = list(reader)
 
-    if has_header and rows:
+    has_header = bool(rows) and _looks_like_header(rows[0])
+    if has_header:
         rows = rows[1:]
 
     pairs: list[tuple[str, str]] = []
