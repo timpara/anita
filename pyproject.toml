@@ -1,6 +1,6 @@
 [project]
 name = "anita-anki"
-version = "0.1.0"
+version = "0.2.0"
 description = "AI-powered Anki deck generator: turn a CSV of word pairs into a multimedia .apkg with TTS and illustrations."
 readme = "README.md"
 requires-python = ">=3.11"
