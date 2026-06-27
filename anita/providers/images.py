@@ -9,9 +9,27 @@ from typing import Protocol
 
 import openai
 import requests
+from openai import APIConnectionError, APITimeoutError, RateLimitError
 from PIL import Image
 
+from anita.providers.retry import TRANSIENT_NETWORK_ERRORS, retry_with_backoff
+
 log = logging.getLogger(__name__)
+
+# OpenAI SDK exceptions that are safe to retry (transient).
+_OPENAI_RETRYABLE: tuple[type[Exception], ...] = (
+    *TRANSIENT_NETWORK_ERRORS,
+    APIConnectionError,
+    APITimeoutError,
+    RateLimitError,
+)
+
+# Exceptions from download phase that are safe to catch after retries.
+_DOWNLOAD_CATCHABLE: tuple[type[Exception], ...] = (
+    *TRANSIENT_NETWORK_ERRORS,
+    requests.ConnectionError,
+    requests.Timeout,
+)
 
 
 class ImageProvider(Protocol):
@@ -21,7 +39,7 @@ class ImageProvider(Protocol):
 
 
 class OpenAIImageProvider:
-    """DALL·E 2 illustrations, auto-resized to a small square for Anki."""
+    """DALL-E 2 illustrations, auto-resized to a small square for Anki."""
 
     name = "openai-dalle2"
 
@@ -43,6 +61,32 @@ class OpenAIImageProvider:
 
     def generate(self, prompt: str, output_path: Path) -> bool:
         try:
+            url = self._generate_url(prompt)
+            if not url:
+                return False
+            self._download(url, output_path)
+            self._optimize(output_path)
+            return True
+        except (APIConnectionError, APITimeoutError, RateLimitError) as exc:
+            log.error("Image generation failed for %r after retries: %s", prompt, exc)
+            return False
+        except openai.BadRequestError as exc:
+            log.error("Image generation rejected for %r: %s", prompt, exc)
+            return False
+        except openai.AuthenticationError as exc:
+            log.error("Image generation auth failed (check OPENAI_API_KEY): %s", exc)
+            return False
+        except _DOWNLOAD_CATCHABLE as exc:
+            log.error("Image download failed for %r after retries: %s", prompt, exc)
+            return False
+        except requests.HTTPError as exc:
+            log.error("Image download HTTP error for %r: %s", prompt, exc)
+            return False
+
+    def _generate_url(self, prompt: str) -> str | None:
+        """Call OpenAI image generation with retry, return the image URL."""
+
+        def _call() -> str | None:
             response = self._client.images.generate(  # type: ignore[call-overload]
                 model=self.model,
                 prompt=f"{prompt}, simple illustration, clean, minimal, white background",
@@ -52,16 +96,19 @@ class OpenAIImageProvider:
             url = response.data[0].url if response.data else None
             if not url:
                 log.error("Image generation returned no URL for %r", prompt)
-                return False
+            return url
 
+        return retry_with_backoff(_call, retryable=_OPENAI_RETRYABLE)
+
+    def _download(self, url: str, output_path: Path) -> None:
+        """Download an image URL with retry on transient network errors."""
+
+        def _call() -> None:
             resp = requests.get(url, timeout=self.request_timeout)
             resp.raise_for_status()
             output_path.write_bytes(resp.content)
-            self._optimize(output_path)
-            return True
-        except Exception as exc:
-            log.error("Image generation failed for %r: %s", prompt, exc)
-            return False
+
+        retry_with_backoff(_call, retryable=_DOWNLOAD_CATCHABLE)
 
     def _optimize(self, image_path: Path) -> None:
         try:
@@ -72,5 +119,5 @@ class OpenAIImageProvider:
                 converted: Image.Image = img.convert("RGB") if img.mode == "RGBA" else img
                 resized = converted.resize(self.target_size, Image.Resampling.LANCZOS)
                 resized.save(image_path, "PNG", optimize=True)
-        except Exception as exc:
+        except OSError as exc:
             log.warning("Image optimization failed for %s: %s", image_path, exc)

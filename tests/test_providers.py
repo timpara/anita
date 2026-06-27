@@ -4,8 +4,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import requests
 from anita.providers.images import OpenAIImageProvider
 from anita.providers.tts import OpenAITTS, build_tts
+from openai import BadRequestError
 
 
 def test_build_tts_rejects_unknown() -> None:
@@ -64,9 +66,15 @@ def test_openai_tts_synthesize_returns_false_on_api_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mocker: Any
 ) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    # Use a BadRequestError (permanent, no retry) to avoid retry delays in tests.
+    exc = BadRequestError(
+        message="input too long",
+        response=mocker.MagicMock(status_code=400),
+        body={"error": {"message": "input too long"}},
+    )
     mocker.patch(
         "anita.providers.tts.openai.OpenAI",
-        return_value=_stub_openai_client(mocker, raise_exc=RuntimeError("boom")),
+        return_value=_stub_openai_client(mocker, raise_exc=exc),
     )
     provider = OpenAITTS()
     assert provider.synthesize("hello", tmp_path / "out.mp3") is False
@@ -152,9 +160,12 @@ def test_openai_image_provider_returns_false_on_http_error(
     client = mocker.MagicMock()
     client.images.generate.return_value = _FakeImageResponse()
     mocker.patch("anita.providers.images.openai.OpenAI", return_value=client)
+
+    # Use requests.HTTPError — a permanent failure that isn't retried.
+    http_error = requests.HTTPError("403 Forbidden")
     mocker.patch(
         "anita.providers.images.requests.get",
-        side_effect=RuntimeError("connection refused"),
+        side_effect=http_error,
     )
 
     provider = OpenAIImageProvider()

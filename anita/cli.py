@@ -76,20 +76,31 @@ def generate(
         typer.Option("--voice-id", help="Voice ID (ElevenLabs only)."),
     ] = None,
     media_dir: Annotated[
-        Path,
-        typer.Option("--media-dir", help="Where to store generated media files."),
-    ] = Path("media"),
+        Path | None,
+        typer.Option(
+            "--media-dir", help="Where to store generated media files (default: alongside output)."
+        ),
+    ] = None,
+    workers: Annotated[
+        int,
+        typer.Option("--workers", "-w", help="Max parallel API requests (1=sequential)."),
+    ] = 4,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable debug logging.")] = False,
 ) -> None:
     """Build an Anki deck from a CSV of source,target word pairs."""
     _configure_logging(verbose)
     try:
+        # Default media_dir: place media alongside the output .apkg file
+        # so it doesn't depend on CWD.
+        resolved_media_dir = media_dir if media_dir is not None else output_apkg.parent / "media"
+
         generator = AnkiDeckGenerator(
             deck_name=deck_name,
             tts_provider=tts,
             elevenlabs_voice_id=voice_id,
             generate_images=images,
-            media_dir=media_dir,
+            media_dir=resolved_media_dir,
+            max_workers=workers,
         )
         generator.generate_deck(input_csv, output_apkg)
         typer.echo(f"✓ Deck written: {output_apkg}")

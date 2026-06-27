@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import genanki
@@ -14,6 +15,11 @@ from anita.providers.images import ImageProvider, OpenAIImageProvider
 from anita.providers.tts import TTSProvider, build_tts
 
 log = logging.getLogger(__name__)
+
+# Default concurrency: enough to keep the network saturated without
+# hammering rate limits too aggressively.  Provider rate limits are
+# typically the binding constraint, not thread count.
+_DEFAULT_WORKERS = 4
 
 
 class AnkiDeckGenerator:
@@ -29,6 +35,7 @@ class AnkiDeckGenerator:
         generate_images: bool = False,
         image_provider: ImageProvider | None = None,
         cache: MediaCache | None = None,
+        max_workers: int = _DEFAULT_WORKERS,
     ) -> None:
         self.deck_name = deck_name
         self.deck_id = deck_id if deck_id is not None else stable_id(deck_name)
@@ -40,6 +47,7 @@ class AnkiDeckGenerator:
         self.model = build_model()
         self.deck = genanki.Deck(self.deck_id, self.deck_name)
         self.package = genanki.Package(self.deck)
+        self.max_workers = max(1, max_workers)
 
         # Resolve TTS provider
         if isinstance(tts_provider, str):
@@ -73,9 +81,13 @@ class AnkiDeckGenerator:
 
         log.info("Building deck %r from %d rows", self.deck_name, len(pairs))
 
+        # Phase 1: Materialize media (TTS + images) concurrently.
+        # Each item's API calls are independent; parallelism hides network latency.
+        results = self._materialize_all(pairs)
+
+        # Phase 2: Build notes sequentially (genanki is not thread-safe).
         for idx, (source, target) in enumerate(pairs):
-            log.info("Processing %d/%d: %s → %s", idx + 1, len(pairs), source, target)
-            audio_fname, image_fname = self._materialize_pair(idx, source, target)
+            audio_fname, image_fname = results[idx]
 
             audio_field = f"[sound:{audio_fname}]" if audio_fname else ""
             image_field = f'<img src="{image_fname}">' if image_fname else ""
@@ -91,6 +103,42 @@ class AnkiDeckGenerator:
         return output_path
 
     # --------------------------------------------------------------- internals
+
+    def _materialize_all(self, pairs: list[tuple[str, str]]) -> list[tuple[str | None, str | None]]:
+        """Materialize audio/images for all pairs using a thread pool.
+
+        Returns a list of (audio_fname, image_fname) in the same order as ``pairs``.
+        """
+        total = len(pairs)
+        results: list[tuple[str | None, str | None]] = [(None, None)] * total  # pre-allocate
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            future_to_idx = {
+                executor.submit(self._materialize_pair, idx, source, target): idx
+                for idx, (source, target) in enumerate(pairs)
+            }
+            for completed, future in enumerate(as_completed(future_to_idx), 1):
+                idx = future_to_idx[future]
+                source, target = pairs[idx]
+                try:
+                    results[idx] = future.result()
+                    log.info(
+                        "Completed %d/%d: %s -> %s",
+                        completed,
+                        total,
+                        source,
+                        target,
+                    )
+                except Exception as exc:
+                    log.error(
+                        "Unexpected error processing %s -> %s: %s",
+                        source,
+                        target,
+                        exc,
+                    )
+                    results[idx] = (None, None)
+
+        return results
 
     def _materialize_pair(
         self, idx: int, source: str, target: str
