@@ -1,0 +1,58 @@
+# ---- Version control ----
+.git/
+.github/
+.gitignore
+
+# ---- Python artefacts ----
+__pycache__/
+*.py[codz]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ---- Tests & dev tooling (not needed in image) ----
+tests/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ---- Secrets & env ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- Docs & meta (not needed at runtime) ----
+CHANGELOG.md
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+SECURITY.md
+
+# ---- Editor / OS ----
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ---- Anita runtime artefacts ----
+media/
+resources/
+*.apkg
+generated_cards.db
+
+# ---- Misc ----
+.pre-commit-config.yaml
+.gitleaks.toml
+Dockerfile
+.dockerignore
+examples/
+requirements-audit.txt
+*.cdx.json

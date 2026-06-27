@@ -1,0 +1,12 @@
+# Code Owners — auto-assigns reviewers on PRs.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default: maintainer reviews everything
+* @timpara
+
+# CI / release pipelines
+.github/ @timpara
+
+# Security-sensitive files
+SECURITY.md @timpara
+.gitleaks.toml @timpara

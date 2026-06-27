@@ -6,8 +6,9 @@ on:
       - "v*"
 
 permissions:
-  contents: write # create GitHub releases
-  id-token: write # OIDC for PyPI trusted publishing
+  contents: write      # create GitHub releases
+  id-token: write      # OIDC for PyPI trusted publishing + Sigstore
+  attestations: write  # GitHub artifact attestations
 
 jobs:
   build:
@@ -65,9 +66,24 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
 
+  attest:
+    name: Generate Sigstore attestations
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "dist/*"
+
   pypi-publish:
     name: Publish to PyPI
-    needs: build
+    needs: [build, attest]
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -81,4 +97,5 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          attestations: true
           skip-existing: true
