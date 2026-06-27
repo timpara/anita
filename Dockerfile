@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # Build stage ------------------------------------------------------------------
-FROM python:3.12-slim AS build
+FROM python:3.14-slim AS build
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -16,7 +16,7 @@ COPY anita ./anita
 RUN uv build --wheel --out-dir /dist
 
 # Runtime stage ----------------------------------------------------------------
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
